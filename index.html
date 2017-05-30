@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Coding Challenge</title>
+	<link rel="stylesheet" href="main.css">
+	<!-- <script  type="text/javascript" src="d3.min.js"></script> -->
+	<script src="https://d3js.org/d3.v3.min.js"></script>
+	<script src = "C:\Users\Rakesh\Desktop\Coding Challenge-1/stock.json"></script>
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.js"></script>
+</head>
+<body>
+	<div id = "askBid">
+	</div>
+		<h2>Ask Price: <span id = "askPrice"></span></h2>
+		<h2>Bid Price: <span id = "bidPrice"></span></h2>
+
+<script>
+	var bboLists = stocks.bboList; //Selecting bboList items
+	var tradeLists = stocks.tradeList; //selecting tradeList items
+
+	var askData = []; //ask price and time of the bboList array
+	var bidData = []; //bid price and time of the bboList array
+	var tradelistData = [];  //price and time of the tradeList array
+
+	var dateParser = d3.time.format("%H:%M:%S").parse; //A date format converter to convert the given timeStr variable to an actual time.
+	//This for loop is to load data into askData array with time and price as keys
+	for(i = 0;i<bboLists.length;i++){
+		askData[i] = {}
+		var a = bboLists[i].timeStr.split("").slice(0,8).join("");
+		askData[i]["time"] = dateParser(a)
+		askData[i]["price"] = (bboLists[i].ask/10000);
+	};
+
+	//This for loop is to load data into bidData array with time and price as keys
+	for(i = 0;i<bboLists.length;i++){
+		bidData[i] = {}
+		var a = bboLists[i].timeStr.split("").slice(0,8).join("");
+		bidData[i]["time"] = dateParser(a)
+		bidData[i]["price"] = (bboLists[i].bid/10000);
+	};
+
+	//This for loop is to load data into tradelistData array with time and price as keys
+	for(i = 0;i<tradeLists.length;i++){
+		tradelistData[i] = {}
+		tradelistData[i]["time"] = dateParser((msToTime(parseInt(tradeLists[i].time)/1000000)));
+		tradelistData[i]["price"] = (tradeLists[i].price/10000);
+	};
+//THis functino is to displays the ask and bid price when the currenttime matches the time provided in Json file.
+function updateTime(){
+	var currentTime = dateParser(Date().split("").slice(16,24).join(	"")).toString();
+	for(i = 0;i<askData.length;i++){
+		// console.log("current Time:"+currentTime+"Loop time:"+askData[i].time.toString())
+			if((askData[i].time).toString() === currentTime){
+				$("#askPrice").html(askData[i].price)
+	}
+			if((bidData[i].time).toString() === currentTime){
+				$("#bidPrice").html(bidData[i].price)
+}
+}
+
+setTimeout(updateTime, 1000);
+}
+setTimeout(updateTime, 1000);
+
+	//THis function converts the given time in nano seconds to the format of HH:MM:SS
+	function msToTime(s) {
+	  var ms = s % 1000;
+	  s = (s - ms) / 1000;
+	  var secs = s % 60;
+	  s = (s - secs) / 60;
+	  var mins = s % 60;
+	  var hrs = (s - mins) / 60;
+	  return hrs + ':' + mins + ':' + secs;
+	}
+
+
+	//Declaring Width, height and margins
+	var w = 1200;
+	var h = 500;
+	var margin = {
+		top: 58,
+		bottom: 100,
+		left: 50,
+		right: 10
+	};
+
+
+	var width = w - margin.left - margin.right;
+	var height = h - margin.top - margin.bottom;
+
+
+	var svg = d3.select("body").append("svg")
+			.attr("id", "chart")
+			.attr("width", w)
+			.attr("height", h);
+
+	var chart = svg.append("g")
+			.classed("display", true)
+			.attr("transform", "translate(" + margin.left + "," + margin.top + ")")
+			.call(d3.behavior.zoom().on("zoom", function () {
+	    svg.attr("transform", "translate(" + d3.event.translate + ")" + " scale(" + d3.event.scale + ")")
+	  }))
+	  .append("g")
+
+	var x = d3.time.scale()
+		.domain(d3.extent(askData,function(d){
+			return d.time;
+		}))
+			.range([0,width]);
+
+
+	var y = d3.scale.linear()
+		.domain([22.700,24.000])
+		.range([height+10,0]);
+
+	var xAxis = d3.svg.axis()
+		.scale(x)
+		.orient("bottom");
+
+	var yAxis = d3.svg.axis()
+		.scale(y)
+		.orient("left")
+		.ticks(20);
+
+	var line = d3.svg.line()
+	.interpolate("step-after")
+		.x(function(d){
+			return x(d.time)
+		})
+		.y(function(d){
+			return y(d.price)
+		});
+
+	var area = d3.svg.area()
+	.interpolate("step-after")
+	  .x(function(d) {
+			 return x(d.time);
+		  })
+	  .y0(height)
+	  .y1(function(d) {
+			return y(d.price);
+		 });
+	var area1 = d3.svg.area()
+	.interpolate("step-after")
+	 .x(function(d) {
+			 return x(d.time);
+		  })
+	 .y0(height)
+	 .y1(function(d) {
+			return y(d.price);
+		 });
+
+	var valueline = d3.svg.line()
+		.interpolate("step-after")
+	  .x(function(d) {
+			return x(d.time);
+		 })
+	  .y(function(d) {
+			return y(d.price);
+		 });
+
+	function plot(params){
+		this.append("g")
+			  .classed("xaxis", true)
+			  .attr("transform", "translate(0," + height + ")")
+			  .call(params.axis.x);
+
+		this.append("g")
+			  .classed("yaxis", true)
+			  .attr("transform", "translate(0,0)")
+			  .call(params.axis.y);
+
+		this.selectAll(".point")
+			  .data(params.data)
+			  .enter()
+				.append("circle")
+				.classed("point", true)
+				.attr("r", 3);
+
+		this.selectAll(".point")
+			.attr("cx", function(d){
+				return x(d.time);
+			})
+			.attr("cy", function(d){
+				return y(d.price);
+			})
+		this.selectAll(".point")
+			.data(params.data)
+			.exit()
+			.remove();
+	}
+	function plot2(params){
+		chart.append("path")
+		 .data([params.data])
+		 .attr("class", "area1")
+		 .attr("d", area1);
+
+	  chart.append("path")
+			.data([params.data])
+			.attr("class", "line1")
+			.attr("d", valueline);
+	}
+
+
+	function plot3(params){
+		chart.append("path")
+		 .data([params.data])
+		 .attr("class", "area")
+		 .attr("d", area);
+		chart.append("path")
+			.data([params.data])
+			.attr("class", "line")
+			.attr("d", valueline);
+	};
+
+	plot2.call(chart, {
+		data: askData,
+		axis: {
+			x: xAxis,
+			y: yAxis
+		}
+	});
+
+	plot3.call(chart, {
+		data: bidData,
+		axis: {
+			x: xAxis,
+			y: yAxis
+		}
+	});
+	plot.call(chart, {
+		data: tradelistData,
+		axis: {
+			x: xAxis,
+			y: yAxis
+		}
+	});
+</script>
+</body>
+</html>
